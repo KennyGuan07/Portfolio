@@ -14,4 +14,4 @@ npm start
 
 ### Database Configuration
 
-Ensure MongoDB is running or update `MONGODB_URI` in `utils/db.js`
+Ensure MongoDB is running locally or update `MONGODB_URI` in `utils/db.js`

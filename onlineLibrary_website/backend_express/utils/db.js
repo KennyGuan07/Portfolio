@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const { MongoClient, ObjectId } = require('mongodb');
-require('dotenv').config();
+// process.env.MONGODB_URI = 'xxx';
+
 
 if (!process.env.MONGODB_URI) {
     process.env.MONGODB_URI = 'mongodb://localhost:27017/libraryDB';
