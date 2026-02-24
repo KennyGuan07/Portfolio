@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox alignment="CENTER" prefHeight="320.0" prefWidth="400.0" spacing="15.0" style="-fx-background-color: #f9f9f9;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+    <padding>
+        <Insets bottom="20" left="20" right="20" top="20" />
+    </padding>
+
+    <Label text="Create a Room" textFill="#333333">
+        <font>
+            <Font name="System Bold" size="26.0" />
+        </font>
+    </Label>
+
+    <HBox alignment="CENTER" spacing="10">
+        <Label text="Room Name:" textFill="#555555">
+            <font>
+                <Font size="14.0" />
+            </font></Label>
+        <TextField fx:id="txtName" prefWidth="200.0" promptText="e.g. My Studio" style="-fx-border-color: #3498db; -fx-background-radius: 3; -fx-border-radius: 3;" />
+    </HBox>
+
+    <HBox alignment="CENTER" spacing="10">
+        <Label text="Canvas Size:" textFill="#555555">
+            <font>
+                <Font size="14.0" />
+            </font></Label>
+        <TextField fx:id="txtSize" alignment="CENTER" prefWidth="60.0" style="-fx-background-radius: 3;" text="50" />
+        <Label text="(pixels per side)" textFill="#888888">
+            <font>
+                <Font size="12.0" />
+            </font>
+        </Label>
+    </HBox>
+
+    <VBox alignment="CENTER" spacing="2">
+        <CheckBox fx:id="chkDrawGuess" text="Draw &amp; Guess Mode" textFill="#333333">
+            <font>
+                <Font size="15.0" />
+            </font></CheckBox>
+        <Label text="(Uncheck for 'Draw Together' Mode)" textFill="#888888">
+            <font>
+                <Font size="11.0" />
+            </font></Label>
+    </VBox>
+
+    <Label />
+
+    <HBox alignment="CENTER" spacing="30">
+        <Button fx:id="btnBack" prefWidth="100.0" style="-fx-background-color: #e0e0e0; -fx-text-fill: #333; -fx-border-color: #ccc; -fx-cursor: hand;" text="Back" />
+        <Button fx:id="btnCreate" defaultButton="true" prefWidth="140.0" style="-fx-background-color: #4CAF50; -fx-text-fill: white; -fx-font-size: 14px; -fx-cursor: hand;" text="Create Room" />
+    </HBox>
+</VBox>

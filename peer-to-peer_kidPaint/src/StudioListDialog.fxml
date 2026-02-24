@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ListView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+
+<VBox alignment="CENTER" prefHeight="250.0" prefWidth="300.0" spacing="10.0" xmlns="http://javafx.com/javafx/21.0.9" xmlns:fx="http://javafx.com/fxml/1">
+    <padding>
+        <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
+    </padding>
+    <Label fx:id="lblStatus" text="Searching for studios..." />
+    <ListView fx:id="listView" prefHeight="150.0" VBox.vgrow="ALWAYS" />
+    <HBox alignment="CENTER" spacing="10.0">
+        <Button fx:id="btnRefresh" text="Refresh" />
+        <Button fx:id="btnJoin" disable="true" text="Join Selected Studio" />
+    </HBox>
+</VBox>

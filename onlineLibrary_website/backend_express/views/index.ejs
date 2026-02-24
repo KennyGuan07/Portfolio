@@ -1,0 +1,74 @@
+<!-- Carousel for Highlighted Books -->
+<% if (highlightedBooks.length > 0) { %>
+<div id="highlightedCarousel" class="carousel slide mb-5" data-bs-ride="carousel">
+    <div class="carousel-inner rounded">
+        <% highlightedBooks.forEach(function(book, index) { %>
+            <div class="carousel-item <%= index === 0 ? 'active' : '' %>">
+                <a href="/books/detail/<%= book._id %>">
+                    <div class="d-flex justify-content-center align-items-center bg-secondary-subtle" style="height: 400px;">
+                        <img src="<%= book.coverImage || 'https://via.placeholder.com/300x400' %>" class="d-block" alt="<%= book.title %>" style="max-height: 100%; width: auto; max-width: 100%;">
+                    </div>
+                </a>
+            </div>
+        <% }); %>
+    </div>
+    <button class="carousel-control-prev" type="button" data-bs-target="#highlightedCarousel" data-bs-slide="prev">
+        <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Previous</span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#highlightedCarousel" data-bs-slide="next">
+        <span class="carousel-control-next-icon" aria-hidden="true"></span>
+        <span class="visually-hidden">Next</span>
+    </button>
+</div>
+<% } %>
+
+<!-- Tabbed Book Lists -->
+<div>
+    <ul class="nav nav-tabs" id="bookTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="new-tab" data-bs-toggle="tab" data-bs-target="#new-tab-pane" type="button" role="tab">New</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="trending-tab" data-bs-toggle="tab" data-bs-target="#trending-tab-pane" type="button" role="tab">Trending</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="hot-tab" data-bs-toggle="tab" data-bs-target="#hot-tab-pane" type="button" role="tab">Hot</button>
+        </li>
+    </ul>
+    <div class="tab-content border border-top-0 rounded-bottom" id="bookTabsContent">
+        <div class="tab-pane fade show active" id="new-tab-pane" role="tabpanel">
+            <% latestBooks.forEach(function(book) { %>
+                <div class="d-flex p-3 border-bottom">
+                    <img src="<%= book.coverImage || 'https://via.placeholder.com/64' %>" width="64" height="64" class="me-3 rounded object-fit-cover">
+                    <div>
+                        <h5 class="mb-1"><a href="/books/detail/<%= book._id %>" class="text-decoration-none text-dark"><%= book.title %></a></h5>
+                        <p class="mb-1 text-muted"><%= book.description ? book.description.substring(0, 150) + (book.description.length > 150 ? '...' : '') : 'No description available.' %></p>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+        <div class="tab-pane fade" id="trending-tab-pane" role="tabpanel">
+             <% trendingBooks.forEach(function(book) { %>
+                <div class="d-flex p-3 border-bottom">
+                    <img src="<%= book.coverImage || 'https://via.placeholder.com/64' %>" width="64" height="64" class="me-3 rounded object-fit-cover">
+                    <div>
+                        <h5 class="mb-1"><a href="/books/detail/<%= book._id %>" class="text-decoration-none text-dark"><%= book.title %></a></h5>
+                        <p class="mb-1 text-muted"><%= book.description ? book.description.substring(0, 150) + (book.description.length > 150 ? '...' : '') : 'No description available.' %></p>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+        <div class="tab-pane fade" id="hot-tab-pane" role="tabpanel">
+             <% hotBooks.forEach(function(book) { %>
+                <div class="d-flex p-3 border-bottom">
+                    <img src="<%= book.coverImage || 'https://via.placeholder.com/64' %>" width="64" height="64" class="me-3 rounded object-fit-cover">
+                    <div>
+                        <h5 class="mb-1"><a href="/books/detail/<%= book._id %>" class="text-decoration-none text-dark"><%= book.title %></a></h5>
+                        <p class="mb-1 text-muted"><%= book.description ? book.description.substring(0, 150) + (book.description.length > 150 ? '...' : '') : 'No description available.' %></p>
+                    </div>
+                </div>
+            <% }); %>
+        </div>
+    </div>
+</div>

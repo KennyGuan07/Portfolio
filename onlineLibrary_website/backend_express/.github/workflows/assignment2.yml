@@ -1,0 +1,138 @@
+name: Test report for Assignment 2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })'" --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      COPILOT_ALLOW_ALL: "true"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://127.0.0.1:27017/comp3047
+      COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+      COPILOT_MCP: ${{ secrets.COPILOT_MCP }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v2
+
+      - name: Setup uv/uvx (Python runner) — use context7
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.12'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Verify uvx installed
+        run: |
+          uv --version
+          uvx --version
+
+      - name: Setup Copilot CLI
+        run: |
+          npm install -g @github/copilot
+          copilot --version
+
+      - name: Install deps
+        run: |
+          npm install
+          npm init playwright@latest
+          npx playwright install --with-deps
+          npm install --save-dev eslint@latest @eslint/js@latest eslint-config-xo
+          echo "import config from 'eslint-config-xo';
+          import {defineConfig} from 'eslint/config';
+
+          export default defineConfig([
+                  config,
+          ]);" > eslint.config.mjs
+          npm install selenium-webdriver --save-dev
+          npm install mongodb --save
+          npm install puppeteer --save-dev
+          go install github.com/isaacphi/mcp-language-server@latest
+
+      - name: Setup git author information
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "<>"
+
+      - name: Setup folders for report
+        run: |
+          mkdir -p report/screenshots
+          mkdir -p report/logs
+
+      - name: Download frontend zip artifact
+        run: |
+          REPO_NAME="${{ github.event.repository.name }}"
+          REPO_VUE="${REPO_NAME/express/vue}"
+          curl -L -o dist.zip "https://ug-cs-hkbu.github.io/$REPO_VUE/dist.zip"
+          unzip dist.zip -d public/
+          cp -a public/dist/* public/
+        env:
+          REPO_OWNER: ${{ github.repository }}
+
+      - name: Wait for MongoDB (Context7 inspired health pattern using ping)
+        run: |
+          for i in {1..30}; do
+            if mongosh "$MONGODB_URI" --quiet --eval 'db.runCommand({ping:1}).ok' 2>/dev/null | grep -q 1; then
+              echo "MongoDB is up"; break; fi; sleep 2; done
+          node -e "require('mongodb').MongoClient.connect(process.env.MONGODB_URI).then(()=>{console.log('Driver connection OK');process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})"
+        shell: bash
+
+      - name: Generate e2e test scripts via Copilot CLI using JavaScript and Playwright
+        continue-on-error: true
+        run: |
+          copilot --add-dir / --additional-mcp-config "$COPILOT_MCP" --log-level debug --log-dir report/logs --allow-all-tools --model claude-haiku-4.5 -p "Use context7 to know the usage of tools, command and library before use. Modify the 404 handler to render public/index.html as error page and return status 200. Generate comprehensive end-to-end test script for Assignment 2 in JavaScript with Selenium, Puppeteer or Playwright for this online book library full-stack application. This is Assignment 2 which focuses on building RESTful API endpoints for the backend and Vue.js frontend with Composition API. The Vue.js frontend has been built and merged into the public folder. The app should be built with Express.js and MongoDB without using Mongoose library. If it built using Mongoose, treat it as warning and proceed. FAIL THE TEST AS IT IS. DO NOT MODIFY ANY EXISTING routes/*.js OR views/*.ejs FILE, FAIL THE TEST AS IT IS, only delete any hardcoded string in db.js. DO NOT FIX ANY BUGS IN ORIGINAL SOURCE CODE and explain any bugs in detail in the test report. The connection string for testing MongoDB is in env var MONGODB_URI. The backend should provide RESTful API endpoints with /api/books prefix: GET /api/books (retrieve/search books with pagination, query params: keyword, category, location, sortBy, sortOrder, isHighlighted, page, limit), GET /api/books/:id (retrieve specific book), POST /api/books (create new book), PUT /api/books/:id (update book), DELETE /api/books/:id (delete book). The test script should cover these requirements: BACKEND API TESTS: 1) Test GET /api/books endpoint with various query parameters (keyword search, category filter, location filter, sorting, pagination) and verify response format includes books array, total count, and pagination info. 2) Test GET /api/books/:id endpoint and verify it returns complete book details. 3) Test POST /api/books endpoint to create new books with proper validation, verify 201 status and returned book object with ID. 4) Test PUT /api/books/:id endpoint to update existing books and verify changes persist in database. 5) Test DELETE /api/books/:id endpoint and verify book is removed from database. 6) Test error handling with invalid data (400 Bad Request), non-existent IDs (404 Not Found), and verify appropriate HTTP status codes and error messages. 7) Test data validation for all required fields (title, description, coverImage, author, isbn, publisher, year, category, location) and verify validation error responses. 8) Verify API returns proper JSON responses with correct Content-Type headers. FRONTEND UI TESTS: 9) Test Vue.js frontend homepage (/) displays carousel of highlighted books and latest 6 books from API endpoints. 10) Test books list page (/books) displays all books with pagination, search and filter functionality consuming API endpoints. 11) Test search page (/search) with advanced search criteria (keyword, category, location, sorting) and verify results from API. 12) Test book detail page (/book/detail/:id) displays complete book information from API. 13) Test add book page (/book/add) form submission to POST /api/books endpoint and verify success notification. 14) Test edit book page (/book/edit/:id) pre-filled form from GET /api/books/:id, update via PUT /api/books/:id, and delete via DELETE /api/books/:id with confirmation. 15) Test navigation bar links and responsive design on mobile/desktop viewports. 16) Test Vue.js Composition API usage (ref, computed, watch) and component functionality. You need to seed the database with sample book records first by inspecting the project source to infer the books collection schema (fields: title, description, coverImage, author, isbn, publisher, year, category, location, isHighlighted, createdAt, updatedAt) and inserting 12 meaningful records featuring varied categories (Science, Technology, Arts, Literature, History, Mathematics, Engineering, Philosophy) and realistic author, publisher, isbn, year values spanning 1998-2024. Distribute isHighlighted true for first 4. Ensure createdAt/updatedAt are ISO timestamps with descending createdAt order. The test script should include setup and teardown steps to start and stop the Express server. Use both HTTP requests (fetch) to test API endpoints directly AND browser automation to test the Vue.js frontend UI. Test various scenarios including edge cases, invalid inputs, and boundary conditions. When testing frontend, verify Vue.js components render correctly, forms submit properly, search/filter functions work, pagination operates correctly, and responsive design adapts to different screen sizes. After API operations, verify changes by querying the MongoDB database directly and checking frontend UI updates. Use appropriate HTTP methods and verify response status codes, headers, and JSON structure. Test both desktop and mobile responsive layouts. Record the full e2e test execution as video for the whole test in report/video.webm. Save the script as e2e-test.js. Capture screenshots at key API and UI test steps and save them as PNG files with sequence number and meaningful filename in report/screenshots/. You should not fix any coding error in original source. For each failed test case, retry for maximum 3 times with different approaches. Ensure the script is robust and can run multiple times without manual intervention. Finally, summarize the verification status for all requirements 1-16 by referencing the captured screenshots and include full logs of the test run in a report of markdown file in report/README.md. The image in report/README.md should reference with relative path."
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+
+      - uses: docker://pandoc/core:3.5
+        continue-on-error: true
+        with:
+          args: >-  # allows you to break string into multiple lines
+            --standalone
+            --output=report/index.html
+            report/README.md
+
+      - name: Upload logs and report as artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: >-
+            report/
+
+  deploy:
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

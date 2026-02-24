@@ -1,0 +1,130 @@
+name: Generate test report via Copilot CLI and deploy to GitHub Pages
+
+on:
+  push:
+    tags: [ '**' ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:6
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd="mongosh --eval 'db.runCommand({ ping: 1 })'" --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      COPILOT_ALLOW_ALL: "true"
+      NODE_ENV: development
+      MONGODB_URI: mongodb://127.0.0.1:27017/comp3047
+      COPILOT_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+      COPILOT_MCP: ${{ secrets.COPILOT_MCP }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+
+      - name: Setup Chrome
+        uses: browser-actions/setup-chrome@v2
+
+      - name: Setup uv/uvx (Python runner) — use context7
+        uses: astral-sh/setup-uv@v4
+        with:
+          python-version: '3.12'
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: Verify uvx installed
+        run: |
+          uv --version
+          uvx --version
+
+      - name: Setup Copilot CLI
+        run: |
+          npm install -g @github/copilot
+          copilot --version
+
+      - name: Install deps
+        run: |
+          npm install
+          npm init playwright@latest
+          npx playwright install --with-deps
+          npm install --save-dev eslint@latest @eslint/js@latest eslint-config-xo
+          echo "import config from 'eslint-config-xo';
+          import {defineConfig} from 'eslint/config';
+
+          export default defineConfig([
+                  config,
+          ]);" > eslint.config.mjs
+          npm install selenium-webdriver --save-dev
+          npm install mongodb --save
+          npm install puppeteer --save-dev
+          go install github.com/isaacphi/mcp-language-server@latest
+
+      - name: Setup git author information
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "<>"
+
+      - name: Setup folders for report
+        run: |
+          mkdir -p report/screenshots
+          mkdir -p report/logs
+
+      - name: Wait for MongoDB (Context7 inspired health pattern using ping)
+        run: |
+          for i in {1..30}; do
+            if mongosh "$MONGODB_URI" --quiet --eval 'db.runCommand({ping:1}).ok' 2>/dev/null | grep -q 1; then
+              echo "MongoDB is up"; break; fi; sleep 2; done
+          node -e "require('mongodb').MongoClient.connect(process.env.MONGODB_URI).then(()=>{console.log('Driver connection OK');process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})"
+        shell: bash
+
+      - name: Generate e2e test scripts via Copilot CLI using JavaScript and Playwright
+        continue-on-error: true
+        run: |
+          copilot --add-dir / --additional-mcp-config "$COPILOT_MCP" --log-level debug --log-dir report/logs --allow-all-tools --model claude-haiku-4.5 -p "Use context7 to know the usage of tools, command and library before use. Generate an end-to-end test script for this Web development assignment in JavaScript with Selenium, Puppeteer or Playwright for this online book library web app project. The app should built with Express.js and MongoDB without using Mongoose library. If it built using Mongoose, treat it as warning and proceed. FAIL THE TEST AS IT IS. DO NOT MODIFY ANY EXISTING routes/*.js OR views/*.ejs FILE,  FAIL THE TEST AS IT IS, only delete any hardcoded string in db.js. DO NOT FIX ANY BUGS IN ORIGINAL SOURCE CODE and explain any bugs in detail in the test report. The connection string for testing MongoDB is in env var MONGODB_URI. The app has routes / (homepage), /books (list all books), /book/add (form to add a new book), /book/detail/:id (view book details), /book/edit/:id/ (form to edit book) and /book/delete/:id (delete book in edit page). The test script should cover these requirements: 1) Verify homepage has carousel and sections 'New Books', 'Trending Books', 'Hot Books'. 2) Verify /books page lists books with at 6 book cards per page and pagination functionality at the bottom of the page. 3) Verify /book/add form has inputs for title, author, isbn, publisher, year, category, location, coverImage, description, isHighlighted checkbox. 4) Create a new book record via the add form, the coverImage should use image URL fetch from https://picsum.photos/ and verify it appears in the list and MongoDB. 5) View a book's detail page and verify fields Author, ISBN, Category, Location are visible. 6) Edit a book record and verify the changes persist, also check the delete function in edit page by clicking on the button and verify the changes persist. 7) Verify navbar links to Home and Books pages. 8) Verify mobile responsive layout with navbar toggler visible on small screen.  You need to seed the database with sample book records first by inspecting the project source to infer the books collection schema (fields: title, description, coverImage, author, isbn, publisher, year, category, location, isHighlighted, createdAt, updatedAt) and inserting 8 meaningful records featuring varied categories (Science, Technology, Arts, Literature, History, Mathematics, Engineering, Philosophy) and realistic author, publisher, isbn, year values spanning 1998-2024. Distribute isHighlighted true for first 3. Ensure createdAt/updatedAt are ISO timestamps with descending createdAt order. The test script should include setup and teardown steps to start and stop the Express server. For each input field, you should inspect the HTML to determine appropriate selectors (IDs, classes, attributes or element types) and verify their presence. Log any bugs or missing function, UI components or HTML elements and attributes. When creating and editing book records, use realistic test data. After creating or editing a book, verify the changes by checking the relevant page content or using the MongoDB shell to query the database. Use selectors based on class names or element types. Test mobile view and desktop view for all pages as well. Record the browser screen as video for the whole e2e test in report/video.webm. Save the script as e2e-test.js. Capture screenshots at key steps and save them as PNG files with sequence number and meaningful filename in report/screenshots/.  You should not fix any coding error in original source. For each failed test case, retry for maximum 3 times with different approaches. Ensure the script is robust and can run multiple times without manual intervention.  Finally, summarize the verification status for requirements 1-8 by referencing the captured screenshots and include full logs of the test run in a report of markdown file in report/README.md. The image in report/README.md should reference with relative path."
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+
+      - uses: docker://pandoc/core:3.5
+        continue-on-error: true
+        with:
+          args: >-  # allows you to break string into multiple lines
+            --standalone
+            --output=report/index.html
+            report/README.md
+
+      - name: Upload logs and report as artifact
+        id: deployment
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: >-
+            report/
+
+  deploy:
+    permissions:
+      id-token: write
+      pages: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
